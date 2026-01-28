@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>EngineerDogo Solar System Calculator</title>
+
+  <!-- Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
+  <style>
+    :root{
+      --bg:#0f172a; --card:#1e293b; --primary:#00d9ff; --accent:#ff6b35; --success:#10b981; --warning:#f59e0b;
+      --shadow:0 20px 50px rgba(0,217,255,0.15); --light-text:#f1f5f9;
+    }
+    
+    *{ box-sizing:border-box; transition:all 0.3s ease; }
+    
+    body{ 
+      margin:0; color:var(--light-text); padding:20px; font-family:'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1a1f35 50%, #0d1b2a 100%);
+      position: relative;
+      overflow-x:hidden;
+    }
+    
+    body::before {
+      content:'';
+      position:fixed; top:0; left:0; width:100%; height:100%;
+      background-image: 
+        radial-gradient(circle at 20% 50%, rgba(0,217,255,0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(255,107,53,0.1) 0%, transparent 50%);
+      pointer-events:none; z-index:0;
+    }
+    
+    .solar-panel-bg {
+      position:fixed; bottom:0; right:0; width:500px; height:500px; opacity:0.05; 
+      background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><g stroke="%2300d9ff" stroke-width="2" fill="none"><rect x="20" y="20" width="30" height="30"/><rect x="60" y="20" width="30" height="30"/><rect x="100" y="20" width="30" height="30"/><rect x="140" y="20" width="30" height="30"/><rect x="20" y="60" width="30" height="30"/><rect x="60" y="60" width="30" height="30"/><rect x="100" y="60" width="30" height="30"/><rect x="140" y="60" width="30" height="30"/><rect x="20" y="100" width="30" height="30"/><rect x="60" y="100" width="30" height="30"/><rect x="100" y="100" width="30" height="30"/><rect x="140" y="100" width="30" height="30"/><rect x="20" y="140" width="30" height="30"/><rect x="60" y="140" width="30" height="30"/><rect x="100" y="140" width="30" height="30"/><rect x="140" y="140" width="30" height="30"/></g></svg>');
+      background-repeat:repeat; z-index:0; animation:float 20s ease-in-out infinite;
+    }
+    
+    @keyframes float { 0%,100%{ transform:translateY(0) rotate(0deg); } 50%{ transform:translateY(-30px) rotate(5deg); } }
+    
+    .wrap{ max-width:1200px; margin:0 auto; position:relative; z-index:1; }
+    
+    .app{ 
+      background: rgba(30,41,59,0.8); border-radius:20px; padding:30px; 
+      box-shadow: 0 25px 60px rgba(0,217,255,0.2), inset 0 1px 0 rgba(255,255,255,0.1);
+      border: 1px solid rgba(0,217,255,0.2); backdrop-filter:blur(10px);
+    }
+    
+    h1{ 
+      color:var(--primary); font-size:32px; margin:0; font-weight:800;
+      background: linear-gradient(135deg, #00d9ff 0%, #00b8ff 100%);
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+      text-shadow: 0 0 30px rgba(0,217,255,0.3);
+    }
+    
+    p.lead{ color:#cbd5e1; margin-top:8px; font-size:14px; }
+    
+    .grid{ display:grid; grid-template-columns:1fr 440px; gap:20px; margin-top:20px; }
+    
+    .card{ 
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border-radius:16px; padding:20px; 
+      box-shadow: 0 15px 40px rgba(0,217,255,0.15), inset 0 1px 0 rgba(255,255,255,0.05);
+      border: 1px solid rgba(0,217,255,0.15);
+      position:relative;
+      overflow:hidden;
+    }
+    
+    .card::before {
+      content:''; position:absolute; top:0; left:-100%; width:100%; height:100%;
+      background:linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+      animation:shimmer 3s infinite;
+    }
+    
+    @keyframes shimmer { to { left:100%; } }
+    
+    .card > strong { 
+      display:block; color:var(--primary); font-size:16px; margin-bottom:12px; 
+      text-transform:uppercase; letter-spacing:1px;
+    }
+    
+    table{ width:100%; border-collapse:collapse; font-size:13px; }
+    th,td{ padding:10px 8px; border-bottom:1px solid rgba(0,217,255,0.1); text-align:left; }
+    th{ font-size:12px; color:var(--primary); background:rgba(0,217,255,0.05); font-weight:700; }
+    tr:hover{ background:rgba(0,217,255,0.05); }
+    
+    input, label{ display:block; }
+    label { color:#cbd5e1; font-size:13px; margin-bottom:6px; font-weight:600; }
+    input{ 
+      padding:10px 12px; border-radius:8px; border:1px solid rgba(0,217,255,0.3); 
+      background:rgba(15,23,42,0.5); color:var(--light-text); font-size:13px;
+      margin-top:4px; margin-bottom:12px;
+    }
+    input:focus { outline:none; border-color:var(--primary); box-shadow:0 0 15px rgba(0,217,255,0.3); background:rgba(15,23,42,0.8); }
+    
+    .btn{ 
+      background: linear-gradient(135deg, var(--primary) 0%, #00b8ff 100%); 
+      color:#000; border:0; padding:10px 16px; border-radius:10px; cursor:pointer; 
+      font-weight:700; font-size:13px; text-transform:uppercase; letter-spacing:0.5px;
+      box-shadow: 0 10px 25px rgba(0,217,255,0.3); border: 1px solid rgba(255,255,255,0.1);
+    }
+    .btn:hover{ transform:translateY(-2px); box-shadow: 0 15px 35px rgba(0,217,255,0.4); }
+    .btn:active{ transform:translateY(0); }
+    
+    .btn.ghost{ 
+      background:transparent; border:2px solid var(--accent); color:var(--accent); 
+      box-shadow:none; padding:8px 14px;
+    }
+    .btn.ghost:hover{ background:rgba(255,107,53,0.1); box-shadow:0 0 20px rgba(255,107,53,0.3); }
+    
+    .results{ display:flex; flex-direction:column; gap:10px; margin-top:12px; }
+    
+    .stat{ 
+      display:flex; justify-content:space-between; align-items:center; padding:12px 14px; 
+      border-radius:12px; background:linear-gradient(135deg, rgba(0,217,255,0.1) 0%, rgba(0,184,255,0.05) 100%);
+      border:1px solid rgba(0,217,255,0.2); position:relative; overflow:hidden;
+    }
+    .stat::before { position:absolute; left:0; top:0; height:100%; width:3px; background:var(--primary); }
+    
+    .stat.highlight{ 
+      background:linear-gradient(135deg, rgba(0,217,255,0.25) 0%, rgba(255,107,53,0.15) 100%);
+      border-color:rgba(0,217,255,0.4);
+    }
+    .stat.success{ 
+      background:linear-gradient(135deg, rgba(16,185,129,0.15) 0%, rgba(16,185,129,0.05) 100%);
+      border-color:rgba(16,185,129,0.3);
+    }
+    .stat.success::before { background:var(--success); }
+    
+    .stat.warning{ 
+      background:linear-gradient(135deg, rgba(245,158,11,0.15) 0%, rgba(255,107,53,0.1) 100%);
+      border-color:rgba(245,158,11,0.3);
+    }
+    .stat.warning::before { background:var(--warning); }
+    
+    .stat b{ color:var(--primary); font-size:16px; }
+    .stat.success b{ color:var(--success); }
+    .stat.warning b{ color:var(--accent); }
+    .muted{ color:#94a3b8; font-size:12px; }
+    
+    .charts{ display:flex; gap:15px; margin-top:15px; flex-wrap:wrap; }
+    canvas{ border-radius:12px; background:rgba(15,23,42,0.5); border:1px solid rgba(0,217,255,0.1); padding:10px; }
+    
+    .section-title{ 
+      font-weight:700; margin-top:14px; color:var(--primary); font-size:13px;
+      text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;
+    }
+    
+    footer{ text-align:center; margin-top:30px; color:#64748b; font-size:12px; }
+    
+    @media(max-width:980px){ 
+      .grid{ grid-template-columns:1fr } 
+      .solar-panel-bg { width:300px; height:300px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="solar-panel-bg"></div>
+  <div class="wrap">
+    <div class="app" id="appRoot">
+      <h1>⚡ EngineerDogo Solar System Calculator</h1>
+      <p class="lead">Add appliances, configure system settings — get instant inverter, battery, solar, generator, and cable sizing recommendations.</p>
+
+      <div class="grid">
+        <!-- Left: appliances -->
+        <div class="card">
+          <strong>Appliances</strong>
+          <div style="overflow:auto;margin-top:8px">
+            <table>
+              <thead>
+                <tr>
+                  <th>Appliance</th>
+                  <th>Count</th>
+                  <th>Watt</th>
+                  <th>Hours/day</th>
+                  <th>Total W</th>
+                  <th>kWh/day</th>
+                  <th>Remove</th>
+                </tr>
+              </thead>
+              <tbody id="applianceBody"></tbody>
+            </table>
+          </div>
+
+          <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:6px">
+            <input id="newName" placeholder="Name" type="text" />
+            <input id="newCount" placeholder="Count" type="number" value="1" />
+            <input id="newWatt" placeholder="Watt" type="number" value="100" />
+            <input id="newHours" placeholder="Hours" type="number" value="1" />
+            <button class="btn" id="btnAdd" type="button" onclick="window._addAppliance()">➕ Add</button>
+          </div>
+          <div class="muted" style="margin-top:6px">Tip: kWh/day = (W × Count × Hours) ÷ 1000</div>
+        </div>
+
+        <!-- Right: settings -->
+        <div class="card">
+          <strong>System Settings & Calculation</strong>
+          <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
+            <label>Report Title <input id="reportTitle" type="text" value="Solar System Design Report" style="width:100%" /></label>
+            <label>System Voltage (V) <input id="systemV" type="number" value="48" onchange="window._autoCalc()" /></label>
+            <label>Backup Hours (h) <input id="backupH" type="number" value="12" onchange="window._autoCalc()" /></label>
+            <label>Battery DOD (0-1) <input id="dod" type="number" value="0.8" onchange="window._autoCalc()" /></label>
+            <label>Inverter Safety × <input id="invSafety" type="number" value="1.25" onchange="window._autoCalc()" /></label>
+            <label>Battery V per unit <input id="batV" type="number" value="12" onchange="window._autoCalc()" /></label>
+            <label>Battery Ah per unit <input id="batAh" type="number" value="200" onchange="window._autoCalc()" /></label>
+            <label>Solar Panel Watt (W) <input id="panelW" type="number" value="400" onchange="window._autoCalc()" /></label>
+            <label>Panel Derating (0-1) <input id="derating" type="number" value="0.8" onchange="window._autoCalc()" /></label>
+            <label>Daily Usage (sun hours) <input id="sunHours" type="number" value="5" onchange="window._autoCalc()" /></label>
+
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+              <button class="btn ghost" id="btnCalc">Calculate</button>
+              <button class="btn" id="btnPDF">📄 PDF Report</button>
+            </div>
+
+            <div id="results" class="results"></div>
+            <div class="charts">
+              <canvas id="pieChart" height="220"></canvas>
+              <canvas id="barChart" height="220"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+      <footer>⚡ EngineerDogo Platform • Advanced Solar System Calculator © 2026 • Powered by Cyan Technology</footer>
+    </div>
+  </div>
+
+  <script>
+  window.onload = function() {
+    const DEFAULTS = [
+      {name:'Freezer',count:1,watt:150,hours:2},
+      {name:'Fridge',count:1,watt:120,hours:24},
+      {name:'TV',count:1,watt:80,hours:4},
+      {name:'Microwave',count:0,watt:1000,hours:0.2},
+      {name:'Cooker',count:0,watt:2000,hours:0.5},
+      {name:'Water Heater',count:0,watt:3000,hours:0.5},
+      {name:'Lights',count:10,watt:10,hours:5},
+      {name:'Pumps',count:0,watt:500,hours:0}
+    ];
+
+    let appliances = JSON.parse(JSON.stringify(DEFAULTS));
+    const body = document.getElementById("applianceBody");
+
+    const systemV=document.getElementById("systemV"),backupH=document.getElementById("backupH"),
+    dod=document.getElementById("dod"),invSafety=document.getElementById("invSafety"),
+    batV=document.getElementById("batV"),batAh=document.getElementById("batAh"),
+    panelW=document.getElementById("panelW"),derating=document.getElementById("derating"),
+    sunHours=document.getElementById("sunHours"),results=document.getElementById("results"),
+    reportTitle=document.getElementById("reportTitle");
+
+    // Generator Database
+    const generators = [
+      {kva:5, watt:4000, model:"Champion 4000W", fuelType:"Petrol"},
+      {kva:7.5, watt:6000, model:"Honda EU6500", fuelType:"Petrol"},
+      {kva:10, watt:8000, model:"DuroMax XP10000", fuelType:"Petrol"},
+      {kva:12.5, watt:10000, model:"Westinghouse iGen4500", fuelType:"Petrol"},
+      {kva:15, watt:12000, model:"Pulsar 12000W", fuelType:"Petrol/Dual"},
+      {kva:20, watt:16000, model:"Champion 16000W", fuelType:"Petrol/Dual"},
+      {kva:25, watt:20000, model:"Westinghouse iGen5500", fuelType:"Petrol"},
+      {kva:30, watt:24000, model:"DuroMax 24000W", fuelType:"Diesel"},
+      {kva:50, watt:40000, model:"Yamaha EF12000", fuelType:"Diesel"},
+      {kva:100, watt:80000, model:"Kipor KDE65SS", fuelType:"Diesel"}
+    ];
+
+    // Cable sizing based on Amperage (AWG/mm²)
+    const cableSizes = [
+      {amps:[0,10], awg:14, mmSq:2.5, material:"Copper"},
+      {amps:[11,15], awg:12, mmSq:4, material:"Copper"},
+      {amps:[16,20], awg:10, mmSq:6, material:"Copper"},
+      {amps:[21,30], awg:8, mmSq:10, material:"Copper"},
+      {amps:[31,40], awg:6, mmSq:16, material:"Copper"},
+      {amps:[41,60], awg:4, mmSq:25, material:"Copper"},
+      {amps:[61,85], awg:2, mmSq:35, material:"Copper"},
+      {amps:[86,120], awg:1, mmSq:50, material:"Copper"},
+      {amps:[121,160], awg:"0", mmSq:70, material:"Copper"},
+      {amps:[161,200], awg:"00", mmSq:95, material:"Copper"}
+    ];
+
+    function getCableSize(amps) {
+      for(let c of cableSizes) {
+        if(amps >= c.amps[0] && amps <= c.amps[1]) {
+          return c;
+        }
+      }
+      return cableSizes[cableSizes.length-1];
+    }
+
+    function recommendGenerator(invW) {
+      const needed = invW / 0.8;
+      let rec = generators[0];
+      for(let g of generators) {
+        if(g.watt >= needed) {
+          rec = g;
+          break;
+        }
+      }
+      return rec;
+    }
+
+    function renderTable(){
+      body.innerHTML="";
+      appliances.forEach((a,i)=>{
+        const tr=document.createElement("tr");
+        tr.innerHTML=`<td>${a.name}</td>
+        <td><input type='number' value='${a.count}' data-i='${i}' data-k='count'></td>
+        <td><input type='number' value='${a.watt}' data-i='${i}' data-k='watt'></td>
+        <td><input type='number' step='0.1' value='${a.hours}' data-i='${i}' data-k='hours'></td>
+        <td>${(a.count*a.watt).toFixed(0)}W</td>
+        <td>${((a.count*a.watt*a.hours)/1000).toFixed(2)}kWh</td>
+        <td><button class='btn ghost' data-i='${i}'>✖</button></td>`;
+        body.appendChild(tr);
+      });
+      body.querySelectorAll("input").forEach(inp=>{
+        inp.oninput=function(){
+          const i=this.dataset.i, k=this.dataset.k;
+          appliances[i][k]=Number(this.value)||0;
+          calculate(); renderTable();
+        }
+      });
+      body.querySelectorAll("button").forEach(btn=>{
+        btn.onclick=function(){
+          const i=this.dataset.i;
+          appliances.splice(i,1);
+          renderTable(); calculate();
+        }
+      });
+    }
+
+    window._addAppliance = function(){
+      const n=document.getElementById("newName").value.trim();
+      const c=Number(document.getElementById("newCount").value)||0;
+      const w=Number(document.getElementById("newWatt").value)||0;
+      const h=Number(document.getElementById("newHours").value)||0;
+      if(!n){alert("Enter name");return;}
+      if(c<=0||w<=0){alert("Count/Watt must be >0");return;}
+      appliances.push({name:n,count:c,watt:w,hours:h});
+      document.getElementById("newName").value="";
+      renderTable(); calculate();
+    }
+
+    window._autoCalc = function(){
+      calculate();
+    }
+
+    function calculate(){
+      const totalW=appliances.reduce((s,a)=>s+a.count*a.watt,0);
+      const totalkWhDay=appliances.reduce((s,a)=>s+(a.count*a.watt*a.hours)/1000,0);
+      const totalkWhMonth=totalkWhDay*30;
+      const sysV=Number(systemV.value)||48,H=Number(backupH.value)||12,
+      DOD=Math.max(0.05,Math.min(0.99,Number(dod.value)||0.8)),
+      invF=Number(invSafety.value)||1.25,
+      singleBatV=Number(batV.value)||12,
+      singleBatAh=Number(batAh.value)||200,
+      panel=Number(panelW.value)||400,
+      der=Math.max(0.05,Math.min(1,Number(derating.value)||0.8)),
+      sunH=Number(sunHours.value)||5;
+
+      const invW=Math.ceil(totalW*invF);
+      const invkVA=(invW/0.8)/1000;
+      const panels=Math.ceil(totalkWhDay*1000/(panel*der*sunH));
+      const Eneed=(totalW*H)/1000;
+      const BatE=Eneed/DOD;
+      const Ah=(BatE*1000)/sysV;
+      const series=Math.round(sysV/singleBatV);
+      const parallel=Math.ceil(Ah/singleBatAh);
+      const totalBat=series*parallel;
+
+      const genRec = recommendGenerator(invW);
+
+      const dcAmps = (invW / sysV);
+      const dcCable = getCableSize(dcAmps);
+
+      const acAmps = (invW / (230 * 0.95));
+      const acCable = getCableSize(acAmps);
+
+      const solarPower = panels * panel * der;
+      const solarAmps = (solarPower / sysV);
+      const solarCable = getCableSize(solarAmps);
+
+      results.innerHTML=`
+        <div style="border-bottom:1px solid #dbeafe;padding-bottom:8px">
+          <div class='section-title'>📊 ENERGY & POWER</div>
+          <div class='stat'><span class='muted'>Instantaneous load</span><b>${totalW.toFixed(0)} W</b></div>
+          <div class='stat'><span class='muted'>Daily energy demand</span><b>${totalkWhDay.toFixed(2)} kWh</b><span class='muted'/${totalkWhMonth.toFixed(0)}/mo</span></div>
+          <div class='stat highlight'><span class='muted'>Peak power requirement</span><b>${(totalW/1000).toFixed(2)} kW</b></div>
+        </div>
+
+        <div style="border-bottom:1px solid #dbeafe;padding:8px 0">
+          <div class='section-title'>🔋 INVERTER & BATTERY SYSTEM</div>
+          <div class='stat'><span class='muted'>Inverter size (w/ safety)</span><b>${invW} W</b><span class='muted'>≈${invkVA.toFixed(2)} kVA</span></div>
+          <div class='stat'><span class='muted'>Battery backup (${H}h)</span><b>${Eneed.toFixed(2)} kWh</b><span class='muted'>Usable @ DOD ${(DOD*100).toFixed(0)}%</span></div>
+          <div class='stat'><span class='muted'>Battery capacity needed</span><b>${BatE.toFixed(2)} kWh</b><span class='muted'>${Ah.toFixed(0)} Ah</span></div>
+          <div class='stat success'><span class='muted'>Battery bank config</span><b>${series}S × ${parallel}P</b><span class='muted'>${totalBat} units (${singleBatV}V ${singleBatAh}Ah each)</span></div>
+        </div>
+
+        <div style="border-bottom:1px solid #dbeafe;padding:8px 0">
+          <div class='section-title'>☀️ SOLAR SYSTEM</div>
+          <div class='stat'><span class='muted'>Solar panels needed</span><b>${panels}</b><span class='muted'>${panel}W ea. = ${panels*panel}W total</span></div>
+          <div class='stat'><span class='muted'>Effective output (${sunH}h/day)</span><b>${(solarPower/1000).toFixed(2)} kW</b><span class='muted'>derating ${(der*100).toFixed(0)}%</span></div>
+        </div>
+
+        <div style="border-bottom:1px solid #dbeafe;padding:8px 0">
+          <div class='section-title'>🏭 BACKUP GENERATOR RECOMMENDATION</div>
+          <div class='stat warning'><span class='muted'>Recommended model</span><b>${genRec.model}</b></div>
+          <div class='stat'><span class='muted'>Generator capacity</span><b>${genRec.kva} kVA (${genRec.watt}W)</b><span class='muted'>${genRec.fuelType}</span></div>
+          <div class='stat'><span class='muted'>Sizing margin</span><b>${((genRec.watt/invW - 1)*100).toFixed(0)}%</b><span class='muted'>above peak load</span></div>
+        </div>
+
+        <div style="padding:8px 0">
+          <div class='section-title'>📡 CABLE SIZING RECOMMENDATIONS</div>
+          <div class='stat'><span class='muted'>DC Cable (Battery↔Inverter)</span><b>${dcCable.awg === '0' ? '1/0' : dcCable.awg === '00' ? '2/0' : dcCable.awg} AWG (${dcCable.mmSq} mm²)</b><span class='muted'>${dcAmps.toFixed(1)}A</span></div>
+          <div class='stat'><span class='muted'>AC Cable (Inverter→Load)</span><b>${acCable.awg === '0' ? '1/0' : acCable.awg === '00' ? '2/0' : acCable.awg} AWG (${acCable.mmSq} mm²)</b><span class='muted'>${acAmps.toFixed(1)}A @ 230V</span></div>
+          <div class='stat'><span class='muted'>Solar DC Cable (Panel→Inverter)</span><b>${solarCable.awg === '0' ? '1/0' : solarCable.awg === '00' ? '2/0' : solarCable.awg} AWG (${solarCable.mmSq} mm²)</b><span class='muted'>${solarAmps.toFixed(1)}A @ ${sysV}V</span></div>
+        </div>
+      `;
+      drawCharts(appliances);
+    }
+
+    let pie=null,bar=null;
+    function drawCharts(data){
+      const labels=data.map(a=>a.name);
+      const pieVals=data.map(a=>(a.count*a.watt*a.hours)/1000);
+      const barVals=data.map(a=>a.count*a.watt);
+      const ctx1=document.getElementById("pieChart"),ctx2=document.getElementById("barChart");
+      if(pie) pie.destroy(); if(bar) bar.destroy();
+      pie=new Chart(ctx1,{type:'pie',data:{labels,datasets:[{data:pieVals,backgroundColor:['#00d9ff','#ff6b35','#ffd60a','#10b981','#f59e0b','#06b6d4','#ec4899','#8b5cf6']}]},options:{plugins:{legend:{position:'bottom',labels:{color:'#cbd5e1'}}}}});
+      bar=new Chart(ctx2,{type:'bar',data:{labels,datasets:[{data:barVals,backgroundColor:['#00d9ff']}]},options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{color:'#cbd5e1'},grid:{color:'rgba(0,217,255,0.1)'}},x:{ticks:{color:'#cbd5e1'},grid:{color:'rgba(0,217,255,0.1)'}}}}});;
+    }
+
+    async function generatePDF(){
+      const {jsPDF}=window.jspdf;
+      const pdf=new jsPDF();
+      pdf.text(reportTitle.value,10,15);
+      const resCanvas=await html2canvas(results);
+      const resImg=resCanvas.toDataURL('image/png');
+      pdf.addImage(resImg,'PNG',10,20,180,0);
+      pdf.addPage();
+      const pie=document.getElementById("pieChart");
+      const bar=document.getElementById("barChart");
+      pdf.text("Load Distribution Charts",10,15);
+      pdf.addImage(pie.toDataURL('image/png'),'PNG',10,25,90,70);
+      pdf.addImage(bar.toDataURL('image/png'),'PNG',110,25,90,70);
+      pdf.save('Solar_System_Design_Report.pdf');
+    }
+
+    document.getElementById("btnCalc").onclick=calculate;
+    document.getElementById("btnPDF").onclick=generatePDF;
+    renderTable(); calculate();
+  }
+  </script>
+</body>
+</html>
